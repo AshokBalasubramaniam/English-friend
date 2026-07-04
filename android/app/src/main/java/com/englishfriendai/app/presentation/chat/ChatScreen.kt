@@ -1,5 +1,9 @@
 package com.englishfriendai.app.presentation.chat
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,13 +36,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.englishfriendai.app.R
 import com.englishfriendai.app.presentation.chat.components.MessageBubble
@@ -64,6 +73,20 @@ fun ChatScreen(
     val streakDays by viewModel.streakDays.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    val context = LocalContext.current
+    var hasRecordAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val requestMicPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasRecordAudioPermission = granted
+        if (granted) viewModel.onMicToggle()
+    }
 
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
@@ -142,7 +165,16 @@ fun ChatScreen(
                     singleLine = true
                 )
 
-                MicButton(isRecording = uiState.isRecording, onClick = viewModel::onMicToggle)
+                MicButton(
+                    isRecording = uiState.isRecording,
+                    onClick = {
+                        if (hasRecordAudioPermission) {
+                            viewModel.onMicToggle()
+                        } else {
+                            requestMicPermission.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                )
 
                 FilledIconButton(onClick = viewModel::sendMessage, enabled = !uiState.isSending) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")

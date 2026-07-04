@@ -41,7 +41,9 @@ class SettingsViewModel @Inject constructor(
                 isDarkMode = false,
                 streakDays = 0,
                 remindersEnabled = true,
-                aiAsksQuestions = true
+                aiAsksQuestions = true,
+                voiceGender = "FEMALE",
+                voiceVolume = 1f
             )
         )
 
@@ -67,6 +69,14 @@ class SettingsViewModel @Inject constructor(
             // Best-effort sync: the local value above is already the source of truth for the
             // UI: if this PATCH fails (offline, etc.), the next successful toggle will retry.
         }
+    }
+
+    fun setVoiceGender(gender: String) {
+        viewModelScope.launch { userPreferencesDataStore.saveVoiceGender(gender) }
+    }
+
+    fun setVoiceVolume(volume: Float) {
+        viewModelScope.launch { userPreferencesDataStore.saveVoiceVolume(volume) }
     }
 
     fun logout() {

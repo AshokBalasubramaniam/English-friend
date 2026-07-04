@@ -3,6 +3,7 @@ package com.englishfriendai.app.data.local.datastore
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,7 +23,10 @@ data class UserPreferences(
     val isDarkMode: Boolean,
     val streakDays: Int,
     val remindersEnabled: Boolean,
-    val aiAsksQuestions: Boolean
+    val aiAsksQuestions: Boolean,
+    /** "MALE" or "FEMALE" — matches [com.englishfriendai.app.core.audio.VoiceGender].name. */
+    val voiceGender: String,
+    val voiceVolume: Float
 )
 
 @Singleton
@@ -37,6 +41,8 @@ class UserPreferencesDataStore @Inject constructor(
         val STREAK_DAYS = intPreferencesKey("streak_days")
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
         val AI_ASKS_QUESTIONS = booleanPreferencesKey("ai_asks_questions")
+        val VOICE_GENDER = stringPreferencesKey("voice_gender")
+        val VOICE_VOLUME = floatPreferencesKey("voice_volume")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -46,7 +52,9 @@ class UserPreferencesDataStore @Inject constructor(
             isDarkMode = prefs[Keys.DARK_MODE] ?: false,
             streakDays = prefs[Keys.STREAK_DAYS] ?: 0,
             remindersEnabled = prefs[Keys.REMINDERS_ENABLED] ?: true,
-            aiAsksQuestions = prefs[Keys.AI_ASKS_QUESTIONS] ?: true
+            aiAsksQuestions = prefs[Keys.AI_ASKS_QUESTIONS] ?: true,
+            voiceGender = prefs[Keys.VOICE_GENDER] ?: "FEMALE",
+            voiceVolume = prefs[Keys.VOICE_VOLUME] ?: 1f
         )
     }
 
@@ -74,6 +82,14 @@ class UserPreferencesDataStore @Inject constructor(
 
     suspend fun saveAiAsksQuestions(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.AI_ASKS_QUESTIONS] = enabled }
+    }
+
+    suspend fun saveVoiceGender(gender: String) {
+        context.dataStore.edit { prefs -> prefs[Keys.VOICE_GENDER] = gender }
+    }
+
+    suspend fun saveVoiceVolume(volume: Float) {
+        context.dataStore.edit { prefs -> prefs[Keys.VOICE_VOLUME] = volume.coerceIn(0f, 1f) }
     }
 
     suspend fun clear() {
