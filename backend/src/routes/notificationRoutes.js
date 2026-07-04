@@ -1,0 +1,15 @@
+'use strict';
+
+const express = require('express');
+const notificationController = require('../controllers/notificationController');
+const { authenticate } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+router.use(authenticate);
+
+router.get('/', notificationController.listNotifications);
+router.patch('/read-all', notificationController.markAllRead);
+router.patch('/:id/read', notificationController.markRead);
+
+module.exports = router;

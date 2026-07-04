@@ -1,0 +1,37 @@
+# Gradle files
+.gradle/
+build/
+app/build/
+
+# Local configuration file (sdk path, secrets, etc.)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+.env
+
+# Log/OS files
+*.log
+.DS_Store
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystore files
+*.p12
+
+# Google services
+google-services.json
+
+# Android Profiling
+*.hprof
+
+# Gradle wrapper jar (binary) — intentionally omitted from this scaffold
+gradle/wrapper/gradle-wrapper.jar

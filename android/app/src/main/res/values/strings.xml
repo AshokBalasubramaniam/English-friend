@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">English Friend AI</string>
+
+    <!-- Auth -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Practice spoken English with your AI friend</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Password</string>
+    <string name="login_button">Log In</string>
+    <string name="google_login_button">Continue with Google</string>
+    <string name="register_prompt">Don\'t have an account? Sign up</string>
+    <string name="register_title">Create your account</string>
+    <string name="name_label">Full name</string>
+    <string name="register_button">Sign Up</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Conversation Practice</string>
+    <string name="chat_input_hint">Type in English or Tamil…</string>
+    <string name="mode_english">English</string>
+    <string name="mode_tamil_english">Tamil + English</string>
+    <string name="mode_tamil">Tamil</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_chat">Chat</string>
+    <string name="nav_history">History</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_vocabulary">Vocabulary</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Notifications -->
+    <string name="daily_reminder_channel_name">Daily Practice Reminder</string>
+    <string name="daily_reminder_title">Time to practice English!</string>
+    <string name="daily_reminder_text">Keep your streak going with a quick conversation.</string>
+</resources>

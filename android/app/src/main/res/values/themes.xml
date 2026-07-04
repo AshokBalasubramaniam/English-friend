@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose-first app: this base theme only needs to disable the classic
+         Android action bar and window title. All real theming (colors, typography,
+         shapes, dark/light + dynamic color) lives in presentation/theme/Theme.kt. -->
+    <style name="Theme.EnglishFriendAI" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

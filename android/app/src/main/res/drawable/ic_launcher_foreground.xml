@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple placeholder glyph: a speech bubble, standing in for a real launcher
+         icon which should be supplied by design before release. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,34 h60 a10,10 0 0 1 10,10 v24 a10,10 0 0 1 -10,10 h-34 l-16,14 v-14 h-10 a10,10 0 0 1 -10,-10 v-24 a10,10 0 0 1 10,-10 z" />
+</vector>

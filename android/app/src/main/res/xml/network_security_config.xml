@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Base network security config. Certificate pinning for the production API host
+    should be added here once real backend certificates are issued.
+    TODO: add <pin-set> entries with real SHA-256 SPKI pins for the production
+    BASE_URL host before shipping a release build. See CertificatePinner stub in
+    core/network/NetworkModule.kt for the corresponding OkHttp wiring.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Example placeholder domain-config, disabled by default. Uncomment and fill in
+         real pins when the production API domain + certs are known.
+    <domain-config>
+        <domain includeSubdomains="true">api.englishfriendai.com</domain>
+        <pin-set expiration="2026-12-31">
+            <pin digest="SHA-256">TODO_REPLACE_WITH_REAL_BASE64_SPKI_PIN=</pin>
+            <pin digest="SHA-256">TODO_REPLACE_WITH_BACKUP_SPKI_PIN=</pin>
+        </pin-set>
+    </domain-config>
+    -->
+</network-security-config>

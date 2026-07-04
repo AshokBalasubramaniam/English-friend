@@ -1,0 +1,34 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Env / secrets (defense in depth; android/ and backend/ also ignore these directly)
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+keystore.properties
+local.properties
+google-services.json
+
+# Dependency / build output (any nested project)
+node_modules/
+build/
+dist/
+.gradle/
+coverage/
+
+# Claude Code local session state
+.claude/
