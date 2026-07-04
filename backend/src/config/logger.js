@@ -73,15 +73,16 @@ const logger = winston.createLogger({
   ],
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    })
-  );
-}
+// Always log to console, not just outside production: on Render (and most PaaS), the
+// filesystem is ephemeral and the dashboard's "Logs" tab only captures stdout/stderr, so
+// file-only logging in production means errors are effectively invisible after the fact.
+logger.add(
+  new winston.transports.Console({
+    format:
+      process.env.NODE_ENV === 'production'
+        ? winston.format.json()
+        : winston.format.combine(winston.format.colorize(), winston.format.simple()),
+  })
+);
 
 module.exports = logger;
