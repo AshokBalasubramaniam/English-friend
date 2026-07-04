@@ -36,11 +36,14 @@ function extractText(candidateResponse) {
  * without derailing the conversation. The language mix (English only,
  * Tamil-English code-switching, or mostly Tamil) is driven by `mode`.
  *
+ * @param {string} userName - the user's display name, so the AI can address them by name
  * @param {object} userMemory - subset of User.memory (officeName, friends, favoriteFood, goals, routines)
  * @param {string} mode - 'english' | 'tamil-english' | 'tamil'
+ * @param {boolean} asksQuestions - whether the AI should proactively ask the user questions
+ *   (Settings.aiAsksQuestions) or just respond/chat without prompting
  * @returns {string} system prompt
  */
-function buildSystemPrompt(userMemory = {}, mode = 'english') {
+function buildSystemPrompt(userName, userMemory = {}, mode = 'english', asksQuestions = true) {
   const { officeName, friends = [], favoriteFood, goals = [], routines = [] } = userMemory;
 
   const memoryLines = [];
@@ -52,7 +55,7 @@ function buildSystemPrompt(userMemory = {}, mode = 'english') {
 
   const memoryBlock = memoryLines.length
     ? `Here is what you remember about your friend so far:\n${memoryLines.join('\n')}`
-    : 'You do not know much about your friend yet - ask friendly questions to learn about their life, naturally, over time.';
+    : 'You do not know much about your friend yet.';
 
   const languageInstruction = {
     english: 'Speak only in simple, natural English. Do not use Tamil.',
@@ -61,12 +64,19 @@ function buildSystemPrompt(userMemory = {}, mode = 'english') {
     tamil: 'Speak mostly in Tamil (using Tamil script), occasionally introducing the English word or phrase being taught in parentheses.',
   }[mode] || 'Speak in simple, natural English.';
 
+  const questionInstruction = asksQuestions
+    ? "- You're curious about their life - ask friendly follow-up questions naturally (about their day, work, food, plans) to keep the conversation going and learn more about them over time."
+    : "- Do NOT ask the user questions. Respond warmly and conversationally, but let them lead - never end your reply with a question, and never proactively ask about their day, work, or life unless they bring it up first.";
+
   return `You are "English Friend AI" - the user's warm, supportive, endlessly patient best friend whose special skill is helping them get comfortable speaking English.
 
+Your friend's name is ${userName || 'friend'} - address them by name naturally sometimes, especially when greeting them.
+
 Personality rules:
-- You talk like a real close friend on WhatsApp: casual, warm, encouraging, curious about their day - never like a textbook or a formal tutor.
+- You talk like a real close friend on WhatsApp: casual, warm, encouraging - never like a textbook or a formal tutor.
 - You remember personal details they've shared and naturally bring them up ("How did the meeting with Ravi go?").
 - ${memoryBlock}
+${questionInstruction}
 - Keep replies short and conversational (2-4 sentences), like a real chat message, not an essay.
 
 Correction rules:

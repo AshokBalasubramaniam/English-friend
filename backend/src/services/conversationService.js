@@ -4,12 +4,17 @@ const conversationRepository = require('../repositories/conversationRepository')
 const messageRepository = require('../repositories/messageRepository');
 const userRepository = require('../repositories/userRepository');
 const progressRepository = require('../repositories/progressRepository');
+const settingsRepository = require('../repositories/settingsRepository');
 const ApiError = require('../utils/ApiError');
 const aiService = require('./aiService');
 const correctionService = require('./correctionService');
 const scoringService = require('./scoringService');
 const vocabularyService = require('./vocabularyService');
 const logger = require('../config/logger');
+
+async function getSettingsForUser(userId) {
+  return (await settingsRepository.findByUser(userId)) || settingsRepository.createDefault(userId);
+}
 
 async function startConversation(userId, mode = 'english') {
   const conversation = await conversationRepository.create({ userId, mode });
@@ -69,9 +74,15 @@ async function addAiMessage(conversationId, text, tamilTranslation = '') {
 async function buildPromptMessages(userId, conversationId) {
   const user = await userRepository.findById(userId);
   const conversation = await getConversation(userId, conversationId);
+  const settings = await getSettingsForUser(userId);
   const history = await messageRepository.findByConversation(conversationId, { limit: 30 });
 
-  const systemPrompt = aiService.buildSystemPrompt(user.memory, conversation.mode);
+  const systemPrompt = aiService.buildSystemPrompt(
+    user.name,
+    user.memory,
+    conversation.mode,
+    settings.aiAsksQuestions
+  );
 
   const chatMessages = history.map((m) => ({
     role: m.sender === 'user' ? 'user' : 'assistant',
@@ -79,6 +90,34 @@ async function buildPromptMessages(userId, conversationId) {
   }));
 
   return [{ role: 'system', content: systemPrompt }, ...chatMessages];
+}
+
+/**
+ * Generates the AI's opening line for a brand-new, empty conversation - greeting the
+ * user by name (and referencing memory, if any) so the chat never starts on a blank
+ * screen. Not persisted here; the caller (conversationController) saves it via
+ * addAiMessage once generated, same as any other AI reply.
+ */
+async function generateOpeningMessage(userId, conversationId) {
+  const user = await userRepository.findById(userId);
+  const conversation = await getConversation(userId, conversationId);
+  const settings = await getSettingsForUser(userId);
+
+  const systemPrompt = aiService.buildSystemPrompt(
+    user.name,
+    user.memory,
+    conversation.mode,
+    settings.aiAsksQuestions
+  );
+
+  const kickoffInstruction = settings.aiAsksQuestions
+    ? 'This is the very start of a new conversation. Greet your friend warmly by name, and ask one friendly opening question to get them talking.'
+    : 'This is the very start of a new conversation. Greet your friend warmly by name with an inviting opening remark - do not ask a question.';
+
+  return aiService.streamReply([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `(${kickoffInstruction})` },
+  ], null);
 }
 
 /**
@@ -116,5 +155,6 @@ module.exports = {
   addUserMessage,
   addAiMessage,
   buildPromptMessages,
+  generateOpeningMessage,
   endConversation,
 };

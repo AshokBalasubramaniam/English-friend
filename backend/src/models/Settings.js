@@ -19,6 +19,9 @@ const settingsSchema = new Schema(
       enum: ['english', 'tamil-english', 'tamil'],
       default: 'english',
     },
+    // Whether the AI friend proactively asks the user questions (opening greeting and
+    // general conversation) or just chats/responds without prompting.
+    aiAsksQuestions: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

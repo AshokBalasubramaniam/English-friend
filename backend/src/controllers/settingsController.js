@@ -12,11 +12,12 @@ const getSettings = asyncHandler(async (req, res) => {
 });
 
 const updateSettings = asyncHandler(async (req, res) => {
-  const { darkMode, notificationsEnabled, languageMode } = req.body;
+  const { darkMode, notificationsEnabled, languageMode, aiAsksQuestions } = req.body;
   const update = {};
   if (darkMode !== undefined) update.darkMode = darkMode;
   if (notificationsEnabled !== undefined) update.notificationsEnabled = notificationsEnabled;
   if (languageMode !== undefined) update.languageMode = languageMode;
+  if (aiAsksQuestions !== undefined) update.aiAsksQuestions = aiAsksQuestions;
 
   const settings = await settingsRepository.upsert(req.user._id, update);
   res.status(200).json({ success: true, data: { settings } });
