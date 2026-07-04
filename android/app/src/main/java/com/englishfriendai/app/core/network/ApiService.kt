@@ -1,13 +1,13 @@
 package com.englishfriendai.app.core.network
 
+import com.englishfriendai.app.data.remote.dto.AuthEnvelope
 import com.englishfriendai.app.data.remote.dto.ConversationDto
 import com.englishfriendai.app.data.remote.dto.GoogleLoginRequest
 import com.englishfriendai.app.data.remote.dto.LoginRequest
-import com.englishfriendai.app.data.remote.dto.LoginResponse
 import com.englishfriendai.app.data.remote.dto.MessageDto
 import com.englishfriendai.app.data.remote.dto.ProgressDto
+import com.englishfriendai.app.data.remote.dto.RefreshEnvelope
 import com.englishfriendai.app.data.remote.dto.RefreshTokenRequest
-import com.englishfriendai.app.data.remote.dto.RefreshTokenResponse
 import com.englishfriendai.app.data.remote.dto.RegisterRequest
 import com.englishfriendai.app.data.remote.dto.SendMessageRequest
 import com.englishfriendai.app.data.remote.dto.UploadAudioResponse
@@ -27,37 +27,42 @@ import retrofit2.http.Path
  */
 interface ApiService {
 
-    @POST("auth/login")
-    suspend fun login(@Body request: LoginRequest): LoginResponse
+    @POST("api/v1/auth/login")
+    suspend fun login(@Body request: LoginRequest): AuthEnvelope
 
-    @POST("auth/register")
-    suspend fun register(@Body request: RegisterRequest): LoginResponse
+    @POST("api/v1/auth/register")
+    suspend fun register(@Body request: RegisterRequest): AuthEnvelope
 
-    @POST("auth/google")
-    suspend fun googleLogin(@Body request: GoogleLoginRequest): LoginResponse
+    @POST("api/v1/auth/google")
+    suspend fun googleLogin(@Body request: GoogleLoginRequest): AuthEnvelope
 
-    @POST("auth/refresh")
-    suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
+    @POST("api/v1/auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshEnvelope
 
-    @POST("chat/message")
-    suspend fun sendMessage(@Body request: SendMessageRequest): MessageDto
+    @POST("api/v1/conversations/{conversationId}/messages")
+    suspend fun sendMessage(
+        @Path("conversationId") conversationId: String,
+        @Body request: SendMessageRequest
+    ): MessageDto
 
-    @GET("conversations")
+    @GET("api/v1/conversations")
     suspend fun getConversations(): List<ConversationDto>
 
-    @GET("conversations/{id}")
+    @GET("api/v1/conversations/{id}")
     suspend fun getConversation(@Path("id") conversationId: String): ConversationDto
 
-    @DELETE("conversations/{id}")
+    @DELETE("api/v1/conversations/{id}")
     suspend fun deleteConversation(@Path("id") conversationId: String)
 
-    @GET("vocabulary")
+    @GET("api/v1/vocabulary")
     suspend fun getVocabulary(): List<VocabularyDto>
 
-    @GET("progress")
+    @GET("api/v1/progress")
     suspend fun getProgress(): ProgressDto
 
+    // NOTE: no backend route exists for this yet (see routes/messageRoutes.js) — this will
+    // 404 until an audio-upload endpoint is added server-side.
     @Multipart
-    @POST("chat/audio")
+    @POST("api/v1/audio/upload")
     suspend fun uploadAudio(@Part audio: MultipartBody.Part): UploadAudioResponse
 }

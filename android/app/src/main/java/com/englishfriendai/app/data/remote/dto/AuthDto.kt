@@ -18,18 +18,30 @@ data class GoogleLoginRequest(
 )
 
 data class RefreshTokenRequest(
-    @SerializedName("refresh_token") val refreshToken: String
+    @SerializedName("refreshToken") val refreshToken: String
+)
+
+// The backend wraps every response as { success, data: {...} } — see authController.js —
+// so the actual payload sits one level deeper than these response DTOs alone can express.
+data class AuthEnvelope(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: LoginResponse
+)
+
+data class RefreshEnvelope(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: RefreshTokenResponse
 )
 
 data class LoginResponse(
     @SerializedName("user") val user: UserDto,
-    @SerializedName("access_token") val accessToken: String,
-    @SerializedName("refresh_token") val refreshToken: String
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("refreshToken") val refreshToken: String
 )
 
 data class RefreshTokenResponse(
-    @SerializedName("access_token") val accessToken: String,
-    @SerializedName("refresh_token") val refreshToken: String
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("refreshToken") val refreshToken: String
 )
 
 data class UserDto(

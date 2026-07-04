@@ -38,7 +38,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, password: String): Result<User> = withContext(ioDispatcher) {
         runCatching {
-            val response = apiService.login(LoginRequest(email, password))
+            val response = apiService.login(LoginRequest(email, password)).data
             persistSession(response)
             response.user.toDomain()
         }
@@ -47,7 +47,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun register(name: String, email: String, password: String): Result<User> =
         withContext(ioDispatcher) {
             runCatching {
-                val response = apiService.register(RegisterRequest(name, email, password))
+                val response = apiService.register(RegisterRequest(name, email, password)).data
                 persistSession(response)
                 response.user.toDomain()
             }
@@ -55,7 +55,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun googleLogin(idToken: String): Result<User> = withContext(ioDispatcher) {
         runCatching {
-            val response = apiService.googleLogin(GoogleLoginRequest(idToken))
+            val response = apiService.googleLogin(GoogleLoginRequest(idToken)).data
             persistSession(response)
             response.user.toDomain()
         }
@@ -65,7 +65,7 @@ class AuthRepositoryImpl @Inject constructor(
         runCatching {
             val refreshToken = encryptedPrefsManager.getRefreshToken()
                 ?: throw IllegalStateException("No refresh token available")
-            val response = apiService.refreshToken(RefreshTokenRequest(refreshToken))
+            val response = apiService.refreshToken(RefreshTokenRequest(refreshToken)).data
             encryptedPrefsManager.saveAccessToken(response.accessToken)
             encryptedPrefsManager.saveRefreshToken(response.refreshToken)
             userPreferencesDataStore.saveSessionToken(response.accessToken)
