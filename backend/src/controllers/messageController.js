@@ -63,8 +63,8 @@ const sendMessage = asyncHandler(async (req, res) => {
     sendEvent('done', { message: aiMessage });
     res.end();
   } catch (err) {
-    logger.error(`sendMessage streaming failed: ${err.message}`);
-    sendEvent('error', { message: 'Failed to generate AI reply' });
+    logger.error(`sendMessage streaming failed: ${err.message}`, { stack: err.stack });
+    sendEvent('error', { message: `Failed to generate AI reply: ${err.message}` });
     res.end();
   }
 });

@@ -46,8 +46,10 @@ function registerChatSocket(io, socket) {
 
       socket.emit('ai_reply_done', { message: aiMessage });
     } catch (err) {
-      logger.error(`chatSocket user_message failed: ${err.message}`);
-      socket.emit('ai_reply_error', { message: 'Failed to generate AI reply' });
+      logger.error(`chatSocket user_message failed: ${err.message}`, { stack: err.stack });
+      // Include the real reason (not just a generic message) so the client can actually
+      // show what went wrong instead of a dead-end "failed" banner.
+      socket.emit('ai_reply_error', { message: `Failed to generate AI reply: ${err.message}` });
     }
   });
 }
