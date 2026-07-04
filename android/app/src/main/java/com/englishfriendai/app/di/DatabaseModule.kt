@@ -16,6 +16,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.sqlcipher.database.SupportFactory
+import java.io.File
 import javax.inject.Singleton
 
 @Module
@@ -30,17 +31,35 @@ object DatabaseModule {
     ): AppDatabase {
         // SQLCipher-backed SupportFactory: the passphrase is generated once and stored inside
         // EncryptedSharedPreferences (see EncryptedPrefsManager.getOrCreateDatabasePassphrase).
-        // TODO: revisit passphrase lifecycle before release — e.g. what happens on app
-        // reinstall/restore, and whether the passphrase should be tied to biometric unlock.
-        val passphrase = encryptedPrefsManager.getOrCreateDatabasePassphrase()
-        val factory = SupportFactory(
-            net.sqlcipher.database.SQLiteDatabase.getBytes(passphrase)
-        )
+        fun build(): AppDatabase {
+            val passphrase = encryptedPrefsManager.getOrCreateDatabasePassphrase()
+            val factory = SupportFactory(net.sqlcipher.database.SQLiteDatabase.getBytes(passphrase))
+            return Room.databaseBuilder(context, AppDatabase::class.java, Constants.DATABASE_NAME)
+                .openHelperFactory(factory)
+                .fallbackToDestructiveMigration()
+                .build()
+        }
 
-        return Room.databaseBuilder(context, AppDatabase::class.java, Constants.DATABASE_NAME)
-            .openHelperFactory(factory)
-            .fallbackToDestructiveMigration()
-            .build()
+        var database = build()
+        try {
+            // Room's .build() is lazy and doesn't actually open the underlying file - force
+            // that now so a wrong-passphrase/corrupted-file failure ("file is not a database")
+            // surfaces here, not on some arbitrary later query deep inside a repository.
+            database.openHelper.readableDatabase.query("SELECT count(*) FROM sqlite_master").use {}
+        } catch (e: Exception) {
+            // The on-disk file was encrypted with a passphrase we no longer have (e.g. a past
+            // bug that cleared the stored passphrase without clearing the database it
+            // protected). That data is unrecoverable without the original key - self-heal by
+            // discarding the orphaned file and starting fresh rather than crashing forever.
+            database.close()
+            context.getDatabasePath(Constants.DATABASE_NAME).let { dbFile ->
+                dbFile.delete()
+                File(dbFile.path + "-wal").delete()
+                File(dbFile.path + "-shm").delete()
+            }
+            database = build()
+        }
+        return database
     }
 
     @Provides
