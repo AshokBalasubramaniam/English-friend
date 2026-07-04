@@ -10,8 +10,10 @@ import com.englishfriendai.app.data.remote.dto.RefreshEnvelope
 import com.englishfriendai.app.data.remote.dto.RefreshTokenRequest
 import com.englishfriendai.app.data.remote.dto.RegisterRequest
 import com.englishfriendai.app.data.remote.dto.SendMessageRequest
+import com.englishfriendai.app.data.remote.dto.SettingsEnvelope
 import com.englishfriendai.app.data.remote.dto.StartConversationEnvelope
 import com.englishfriendai.app.data.remote.dto.StartConversationRequest
+import com.englishfriendai.app.data.remote.dto.UpdateSettingsRequest
 import com.englishfriendai.app.data.remote.dto.UploadAudioResponse
 import com.englishfriendai.app.data.remote.dto.VocabularyDto
 import okhttp3.MultipartBody
@@ -19,6 +21,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
@@ -64,6 +67,9 @@ interface ApiService {
 
     @GET("api/v1/progress")
     suspend fun getProgress(): ProgressDto
+
+    @PATCH("api/v1/settings")
+    suspend fun updateSettings(@Body request: UpdateSettingsRequest): SettingsEnvelope
 
     // NOTE: no backend route exists for this yet (see routes/messageRoutes.js) — this will
     // 404 until an audio-upload endpoint is added server-side.

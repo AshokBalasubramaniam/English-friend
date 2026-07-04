@@ -63,6 +63,17 @@ class ConversationRepositoryImpl @Inject constructor(
         }
         .flowOn(ioDispatcher)
 
+    override suspend fun startNewConversation(mode: ConversationMode): Result<Pair<String, Message?>> =
+        runCatching {
+            val (newId, greetingDto) = startConversationRemoteAndCache(mode)
+            val greeting = greetingDto?.toDomain()
+            greeting?.let {
+                messageDao.upsert(it.toEntity())
+                it.correction?.let { correction -> correctionDao.upsert(correction.toEntity(it.id)) }
+            }
+            newId to greeting
+        }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun sendMessage(
         conversationId: String?,
@@ -72,7 +83,7 @@ class ConversationRepositoryImpl @Inject constructor(
         // The backend requires a real, already-created conversation id before it will accept
         // any message over the socket (see chatSocket.js) — create one now if this is a
         // brand-new chat, and cache it locally so the FK on messages.conversationId is satisfied.
-        val realConversationId = conversationId ?: startConversationRemoteAndCache(mode)
+        val realConversationId = conversationId ?: startConversationRemoteAndCache(mode).first
 
         val userMessage = Message(
             id = UUID.randomUUID().toString(),
@@ -123,9 +134,11 @@ class ConversationRepositoryImpl @Inject constructor(
         )
     }.flowOn(ioDispatcher)
 
-    private suspend fun startConversationRemoteAndCache(mode: ConversationMode): String {
-        val newId = apiService.startConversation(StartConversationRequest(mode.toApiValue()))
-            .data.conversation.id
+    private suspend fun startConversationRemoteAndCache(
+        mode: ConversationMode
+    ): Pair<String, com.englishfriendai.app.data.remote.dto.MessageDto?> {
+        val data = apiService.startConversation(StartConversationRequest(mode.toApiValue())).data
+        val newId = data.conversation.id
         val now = System.currentTimeMillis()
         conversationDao.upsert(
             ConversationEntity(
@@ -135,7 +148,7 @@ class ConversationRepositoryImpl @Inject constructor(
                 updatedAt = now
             )
         )
-        return newId
+        return newId to data.greeting
     }
 
     override suspend fun deleteConversation(conversationId: String): Result<Unit> = runCatching {

@@ -21,7 +21,8 @@ data class UserPreferences(
     val languageMode: String,
     val isDarkMode: Boolean,
     val streakDays: Int,
-    val remindersEnabled: Boolean
+    val remindersEnabled: Boolean,
+    val aiAsksQuestions: Boolean
 )
 
 @Singleton
@@ -35,6 +36,7 @@ class UserPreferencesDataStore @Inject constructor(
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val STREAK_DAYS = intPreferencesKey("streak_days")
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
+        val AI_ASKS_QUESTIONS = booleanPreferencesKey("ai_asks_questions")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -43,7 +45,8 @@ class UserPreferencesDataStore @Inject constructor(
             languageMode = prefs[Keys.LANGUAGE_MODE] ?: "ENGLISH",
             isDarkMode = prefs[Keys.DARK_MODE] ?: false,
             streakDays = prefs[Keys.STREAK_DAYS] ?: 0,
-            remindersEnabled = prefs[Keys.REMINDERS_ENABLED] ?: true
+            remindersEnabled = prefs[Keys.REMINDERS_ENABLED] ?: true,
+            aiAsksQuestions = prefs[Keys.AI_ASKS_QUESTIONS] ?: true
         )
     }
 
@@ -67,6 +70,10 @@ class UserPreferencesDataStore @Inject constructor(
 
     suspend fun saveRemindersEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.REMINDERS_ENABLED] = enabled }
+    }
+
+    suspend fun saveAiAsksQuestions(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.AI_ASKS_QUESTIONS] = enabled }
     }
 
     suspend fun clear() {

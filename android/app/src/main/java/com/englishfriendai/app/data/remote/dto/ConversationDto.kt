@@ -33,7 +33,10 @@ data class StartConversationEnvelope(
 )
 
 data class StartConversationData(
-    @SerializedName("conversation") val conversation: ConversationRefDto
+    @SerializedName("conversation") val conversation: ConversationRefDto,
+    // The AI's personalized opening greeting - see conversationController.js#startConversation.
+    // May be null if greeting generation failed server-side; the conversation still starts fine.
+    @SerializedName("greeting") val greeting: MessageDto?
 )
 
 data class ConversationRefDto(

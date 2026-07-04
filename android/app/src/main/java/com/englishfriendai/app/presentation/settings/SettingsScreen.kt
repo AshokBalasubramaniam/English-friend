@@ -59,6 +59,12 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            SettingRow(label = "AI asks me questions") {
+                Switch(checked = preferences.aiAsksQuestions, onCheckedChange = viewModel::setAiAsksQuestions)
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             Button(
                 onClick = {
                     viewModel.logout()
