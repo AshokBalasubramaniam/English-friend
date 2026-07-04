@@ -15,7 +15,7 @@ routes -> controllers -> services -> repositories -> models
 
 - **models/** - Mongoose schemas (User, Conversation, Message, Correction, Vocabulary, Progress, Settings, Notification, Feedback, Analytics)
 - **repositories/** - thin CRUD/query wrappers over each model
-- **services/** - business logic (auth, conversation flow, OpenAI integration, correction, translation, scoring, vocabulary extraction, notifications)
+- **services/** - business logic (auth, conversation flow, Gemini integration, correction, translation, scoring, vocabulary extraction, notifications)
 - **controllers/** - thin HTTP glue: parse req, call service, shape res
 - **routes/** - Express routers, mounted under `/api/v1`
 - **middleware/** - auth, rate limiting, validation, centralized error handling
@@ -37,7 +37,7 @@ routes -> controllers -> services -> repositories -> models
    ```
 
    You need at minimum: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`,
-   and `OPENAI_API_KEY`. The server refuses to start if any required
+   and `GEMINI_API_KEY`. The server refuses to start if any required
    variable is missing (see `src/config/env.js`).
 
 3. Run in development (auto-restart via nodemon):
@@ -96,7 +96,7 @@ This repo includes a `render.yaml` Blueprint. Steps:
 
 1. Push this `backend/` folder to a GitHub repo (Render deploys from a git repo, not a local folder).
 2. In the Render dashboard: **New > Blueprint**, point it at that repo. Render reads `render.yaml` and creates the web service automatically (Node runtime, `npm install` build, `npm start` start command, `/health` health check).
-3. Render prompts you to fill in the vars marked `sync: false` — paste in your real `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `OPENAI_API_KEY`, and `GOOGLE_CLIENT_ID` there. These are stored encrypted in Render, never in the repo.
+3. Render prompts you to fill in the vars marked `sync: false` — paste in your real `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `GEMINI_API_KEY`, and `GOOGLE_CLIENT_ID` there. These are stored encrypted in Render, never in the repo.
 4. Do **not** set `PORT` yourself — Render injects its own `PORT` env var at runtime, and `server.js` already reads `process.env.PORT`.
 5. In MongoDB Atlas, make sure Network Access allows connections from anywhere (`0.0.0.0/0`) or Render's static outbound IPs, otherwise the deployed service can't reach your cluster.
 6. Once live, confirm with `GET https://<your-service>.onrender.com/health`.
@@ -106,7 +106,8 @@ If you'd rather configure the service manually instead of via Blueprint: Runtime
 ## Notes on scope (this is a scaffold pass)
 
 - `aiService.js`, `correctionService.js`, and `translationService.js` contain
-  real, runnable OpenAI integrations.
+  real, runnable Gemini (Google AI Studio) integrations, called via plain
+  `fetch` against the Gemini REST API rather than an SDK dependency.
 - `authService.googleLogin` validates a client-supplied Google profile but
   does **not** yet cryptographically verify the Google ID token against
   Google's public keys - see the `TODO(production)` comment in that file.

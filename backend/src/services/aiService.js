@@ -1,10 +1,33 @@
 'use strict';
 
-const OpenAI = require('openai');
 const env = require('../config/env');
 const logger = require('../config/logger');
 
-const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/**
+ * Converts our OpenAI-style {role: 'system'|'user'|'assistant', content} messages into
+ * Gemini's request shape: a separate systemInstruction plus a contents[] array using
+ * Gemini's role names ('user' / 'model' - Gemini has no 'assistant' or 'system' role here).
+ */
+function toGeminiRequest(messages) {
+  const systemMessages = messages.filter((m) => m.role === 'system');
+  const turns = messages.filter((m) => m.role !== 'system');
+
+  return {
+    systemInstruction: systemMessages.length
+      ? { parts: [{ text: systemMessages.map((m) => m.content).join('\n\n') }] }
+      : undefined,
+    contents: turns.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    })),
+  };
+}
+
+function extractText(candidateResponse) {
+  return candidateResponse?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+}
 
 /**
  * Builds the system prompt that defines "English Friend AI"'s persona:
@@ -58,9 +81,10 @@ Stay in character as their friend at all times. Never mention that you are an AI
 }
 
 /**
- * Streams a chat completion from OpenAI, invoking onDelta(text) for each
+ * Streams a chat completion from Gemini, invoking onDelta(text) for each
  * incoming text chunk. Resolves with the full concatenated reply text
- * once the stream completes.
+ * once the stream completes. Uses Gemini's SSE streaming endpoint directly
+ * (no SDK dependency) via Node's built-in fetch.
  *
  * @param {Array<{role: 'system'|'user'|'assistant', content: string}>} messages
  * @param {(chunk: string) => void} onDelta
@@ -69,29 +93,64 @@ Stay in character as their friend at all times. Never mention that you are an AI
  */
 async function streamReply(messages, onDelta, options = {}) {
   const { temperature = 0.8, maxTokens = 400 } = options;
+  const { systemInstruction, contents } = toGeminiRequest(messages);
+  const url = `${GEMINI_BASE_URL}/${env.GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
 
   let fullText = '';
 
   try {
-    const stream = await client.chat.completions.create({
-      model: env.OPENAI_MODEL,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      stream: true,
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          // Disables Gemini 2.5's extended "thinking" tokens - not worth the added
+          // latency for a real-time chat reply.
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
     });
 
-    for await (const part of stream) {
-      const delta = part?.choices?.[0]?.delta?.content;
-      if (delta) {
-        fullText += delta;
-        if (typeof onDelta === 'function') onDelta(delta);
+    if (!response.ok || !response.body) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`Gemini streamGenerateContent failed (${response.status}): ${errorBody}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    // Gemini's alt=sse stream sends one JSON object per "data: ..." line, each
+    // event separated by a blank line, matching standard Server-Sent Events framing.
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      // Gemini sends CRLF line endings (events end in "\r\n\r\n"), not bare "\n\n".
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+
+      let eventEnd;
+      while ((eventEnd = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, eventEnd);
+        buffer = buffer.slice(eventEnd + 2);
+
+        const dataLine = rawEvent.split('\n').find((line) => line.startsWith('data: '));
+        if (!dataLine) continue;
+
+        const delta = extractText(JSON.parse(dataLine.slice('data: '.length)));
+        if (delta) {
+          fullText += delta;
+          if (typeof onDelta === 'function') onDelta(delta);
+        }
       }
     }
 
     return fullText;
   } catch (err) {
-    logger.error(`OpenAI streamReply failed: ${err.message}`);
+    logger.error(`Gemini streamReply failed: ${err.message}`);
     throw err;
   }
 }
@@ -107,19 +166,33 @@ async function streamReply(messages, onDelta, options = {}) {
  */
 async function completeJSON(messages, options = {}) {
   const { temperature = 0.3, maxTokens = 500 } = options;
+  const { systemInstruction, contents } = toGeminiRequest(messages);
+  const url = `${GEMINI_BASE_URL}/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
   try {
-    const response = await client.chat.completions.create({
-      model: env.OPENAI_MODEL,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      response_format: { type: 'json_object' },
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          responseMimeType: 'application/json',
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
     });
 
-    return response.choices[0]?.message?.content || '{}';
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`Gemini generateContent failed (${response.status}): ${errorBody}`);
+    }
+
+    return extractText(await response.json()) || '{}';
   } catch (err) {
-    logger.error(`OpenAI completeJSON failed: ${err.message}`);
+    logger.error(`Gemini completeJSON failed: ${err.message}`);
     throw err;
   }
 }

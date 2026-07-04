@@ -13,7 +13,7 @@ const REQUIRED_VARS = [
   'MONGODB_URI',
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
-  'OPENAI_API_KEY',
+  'GEMINI_API_KEY',
 ];
 
 function requireEnv(name, fallback) {
@@ -51,8 +51,8 @@ const env = {
   JWT_ACCESS_EXPIRY: requireEnv('JWT_ACCESS_EXPIRY', '15m'),
   JWT_REFRESH_EXPIRY: requireEnv('JWT_REFRESH_EXPIRY', '7d'),
 
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  OPENAI_MODEL: requireEnv('OPENAI_MODEL', 'gpt-4o-mini'),
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  GEMINI_MODEL: requireEnv('GEMINI_MODEL', 'gemini-2.5-flash'),
 
   GOOGLE_CLIENT_ID: requireEnv('GOOGLE_CLIENT_ID', ''),
 

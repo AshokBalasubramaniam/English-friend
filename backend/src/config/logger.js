@@ -17,7 +17,7 @@ const SENSITIVE_KEYS = [
   'accessToken',
   'authorization',
   'token',
-  'openaiApiKey',
+  'geminiApiKey',
   'apiKey',
 ];
 
