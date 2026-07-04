@@ -3,6 +3,7 @@ package com.englishfriendai.app.di
 import com.englishfriendai.app.BuildConfig
 import com.englishfriendai.app.core.network.ApiService
 import com.englishfriendai.app.core.network.AuthInterceptor
+import com.englishfriendai.app.core.network.TokenAuthenticator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -62,6 +63,7 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(com.englishfriendai.app.core.util.Constants.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -69,6 +71,7 @@ object NetworkModule {
         .writeTimeout(com.englishfriendai.app.core.util.Constants.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
+        .authenticator(tokenAuthenticator)
         // .certificatePinner(...) // TODO: see doc comment above.
         .build()
 

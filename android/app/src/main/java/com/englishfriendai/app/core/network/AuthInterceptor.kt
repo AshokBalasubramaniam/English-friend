@@ -27,9 +27,8 @@ class AuthInterceptor @Inject constructor(
             originalRequest
         }
 
-        // TODO: on a 401 response here, trigger RefreshTokenRequest via ApiService.refreshToken()
-        // and retry once with the new access token. Left as a follow-up for the real
-        // authenticator/interceptor chain once the backend's refresh contract is finalized.
+        // 401 handling (refresh + retry) lives in TokenAuthenticator, not here — OkHttp only
+        // invokes an Authenticator, not an Interceptor, in response to a 401 challenge.
         return chain.proceed(authorizedRequest)
     }
 }
