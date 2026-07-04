@@ -36,7 +36,6 @@ class SettingsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = UserPreferences(
-                sessionToken = null,
                 languageMode = "ENGLISH",
                 isDarkMode = false,
                 streakDays = 0,

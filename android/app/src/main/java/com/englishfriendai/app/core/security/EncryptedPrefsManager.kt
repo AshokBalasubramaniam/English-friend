@@ -47,8 +47,17 @@ class EncryptedPrefsManager @Inject constructor(
 
     fun getRefreshToken(): String? = sharedPreferences.getString(KEY_REFRESH_TOKEN, null)
 
-    fun clear() {
-        sharedPreferences.edit().clear().apply()
+    /**
+     * Clears only the session (access/refresh tokens) — NOT the whole preferences file.
+     * [KEY_DB_PASSPHRASE] must survive login/logout cycles: it's the SQLCipher key for the
+     * already-existing encrypted Room database, and wiping it would orphan that database
+     * (a freshly generated passphrase can't open a file encrypted with the old one).
+     */
+    fun clearSession() {
+        sharedPreferences.edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .apply()
     }
 
     /**

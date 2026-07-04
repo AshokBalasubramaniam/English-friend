@@ -16,9 +16,18 @@ import javax.inject.Singleton
 
 private val Context.dataStore by preferencesDataStore(name = Constants.DATASTORE_NAME)
 
-/** Session/settings state that is fine to keep in plain (unencrypted) DataStore Preferences. */
+/**
+ * Settings state that is fine to keep in plain (unencrypted) DataStore Preferences.
+ *
+ * Deliberately does NOT include a session/login-state field: the real session lives in
+ * [com.englishfriendai.app.core.security.EncryptedPrefsManager] (the tokens actually used
+ * for API auth). A previous version duplicated a "sessionToken" flag here for splash-screen
+ * routing, but TokenAuthenticator's silent refresh only ever updated EncryptedPrefsManager,
+ * so the two could drift out of sync - if EncryptedPrefsManager's tokens were ever cleared
+ * (e.g. an invalid refresh) while this stale flag lingered, Splash would wrongly route
+ * straight into the app with no usable session and no way to recover except a manual logout.
+ */
 data class UserPreferences(
-    val sessionToken: String?,
     val languageMode: String,
     val isDarkMode: Boolean,
     val streakDays: Int,
@@ -35,7 +44,6 @@ class UserPreferencesDataStore @Inject constructor(
 ) {
 
     private object Keys {
-        val SESSION_TOKEN = stringPreferencesKey("session_token")
         val LANGUAGE_MODE = stringPreferencesKey("language_mode")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val STREAK_DAYS = intPreferencesKey("streak_days")
@@ -47,7 +55,6 @@ class UserPreferencesDataStore @Inject constructor(
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
         UserPreferences(
-            sessionToken = prefs[Keys.SESSION_TOKEN],
             languageMode = prefs[Keys.LANGUAGE_MODE] ?: "ENGLISH",
             isDarkMode = prefs[Keys.DARK_MODE] ?: false,
             streakDays = prefs[Keys.STREAK_DAYS] ?: 0,
@@ -56,12 +63,6 @@ class UserPreferencesDataStore @Inject constructor(
             voiceGender = prefs[Keys.VOICE_GENDER] ?: "FEMALE",
             voiceVolume = prefs[Keys.VOICE_VOLUME] ?: 1f
         )
-    }
-
-    suspend fun saveSessionToken(token: String?) {
-        context.dataStore.edit { prefs ->
-            if (token == null) prefs.remove(Keys.SESSION_TOKEN) else prefs[Keys.SESSION_TOKEN] = token
-        }
     }
 
     suspend fun saveLanguageMode(mode: String) {

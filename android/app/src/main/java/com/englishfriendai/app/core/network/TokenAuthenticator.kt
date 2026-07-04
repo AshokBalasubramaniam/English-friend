@@ -62,7 +62,7 @@ class TokenAuthenticator @Inject constructor(
             } ?: run {
                 // Refresh token itself is invalid/expired - clear the session so the app can
                 // route back to login instead of retrying with stale credentials forever.
-                encryptedPrefsManager.clear()
+                encryptedPrefsManager.clearSession()
                 null
             } ?: return null
 

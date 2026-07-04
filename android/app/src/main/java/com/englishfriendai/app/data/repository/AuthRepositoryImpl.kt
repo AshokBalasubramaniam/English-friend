@@ -68,20 +68,17 @@ class AuthRepositoryImpl @Inject constructor(
             val response = apiService.refreshToken(RefreshTokenRequest(refreshToken)).data
             encryptedPrefsManager.saveAccessToken(response.accessToken)
             encryptedPrefsManager.saveRefreshToken(response.refreshToken)
-            userPreferencesDataStore.saveSessionToken(response.accessToken)
         }
     }
 
     override suspend fun logout() {
-        encryptedPrefsManager.clear()
-        userPreferencesDataStore.saveSessionToken(null)
+        encryptedPrefsManager.clearSession()
         currentUserState.value = null
     }
 
     private suspend fun persistSession(response: LoginResponse) {
         encryptedPrefsManager.saveAccessToken(response.accessToken)
         encryptedPrefsManager.saveRefreshToken(response.refreshToken)
-        userPreferencesDataStore.saveSessionToken(response.accessToken)
         userPreferencesDataStore.saveStreakDays(response.user.streakDays)
         currentUserState.value = response.user.toDomain()
     }
