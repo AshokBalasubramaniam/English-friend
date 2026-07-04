@@ -26,29 +26,50 @@ class TokenAuthenticator @Inject constructor(
     private val apiServiceProvider: Provider<ApiService>
 ) : Authenticator {
 
+    // OkHttp calls authenticate() independently for every request that comes back 401. If two
+    // requests are in flight when the access token expires, both would otherwise try to
+    // refresh at once; since the backend rotates the refresh token on each use, the second
+    // call would fail with the now-stale token and wipe out a perfectly good new session.
+    // Synchronizing serializes concurrent attempts so only the first actually calls the
+    // refresh endpoint - everyone else just reuses whatever it produced.
+    private val refreshLock = Any()
+
     override fun authenticate(route: Route?, response: Response): Request? {
         // Already retried once for this request chain - give up rather than loop forever.
         if (responseCount(response) >= 2) return null
 
-        val refreshToken = encryptedPrefsManager.getRefreshToken() ?: return null
+        synchronized(refreshLock) {
+            val failedAccessToken = response.request.header(Constants.HEADER_AUTHORIZATION)
+                ?.removePrefix(Constants.BEARER_PREFIX)
+            val currentAccessToken = encryptedPrefsManager.getAccessToken()
 
-        val newAccessToken = runBlocking {
-            runCatching {
-                val envelope = apiServiceProvider.get().refreshToken(RefreshTokenRequest(refreshToken))
-                encryptedPrefsManager.saveAccessToken(envelope.data.accessToken)
-                encryptedPrefsManager.saveRefreshToken(envelope.data.refreshToken)
-                envelope.data.accessToken
-            }.getOrNull()
-        } ?: run {
-            // Refresh token itself is invalid/expired - clear the session so the app can
-            // route back to login instead of retrying with stale credentials forever.
-            encryptedPrefsManager.clear()
-            null
-        } ?: return null
+            // Another thread already refreshed while we were waiting for the lock.
+            if (currentAccessToken != null && currentAccessToken != failedAccessToken) {
+                return response.request.newBuilder()
+                    .header(Constants.HEADER_AUTHORIZATION, "${Constants.BEARER_PREFIX}$currentAccessToken")
+                    .build()
+            }
 
-        return response.request.newBuilder()
-            .header(Constants.HEADER_AUTHORIZATION, "${Constants.BEARER_PREFIX}$newAccessToken")
-            .build()
+            val refreshToken = encryptedPrefsManager.getRefreshToken() ?: return null
+
+            val newAccessToken = runBlocking {
+                runCatching {
+                    val envelope = apiServiceProvider.get().refreshToken(RefreshTokenRequest(refreshToken))
+                    encryptedPrefsManager.saveAccessToken(envelope.data.accessToken)
+                    encryptedPrefsManager.saveRefreshToken(envelope.data.refreshToken)
+                    envelope.data.accessToken
+                }.getOrNull()
+            } ?: run {
+                // Refresh token itself is invalid/expired - clear the session so the app can
+                // route back to login instead of retrying with stale credentials forever.
+                encryptedPrefsManager.clear()
+                null
+            } ?: return null
+
+            return response.request.newBuilder()
+                .header(Constants.HEADER_AUTHORIZATION, "${Constants.BEARER_PREFIX}$newAccessToken")
+                .build()
+        }
     }
 
     private fun responseCount(response: Response): Int {
