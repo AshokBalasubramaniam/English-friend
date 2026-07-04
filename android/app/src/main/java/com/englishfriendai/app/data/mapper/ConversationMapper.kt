@@ -4,8 +4,16 @@ import com.englishfriendai.app.data.local.db.ConversationEntity
 import com.englishfriendai.app.data.remote.dto.ConversationDto
 import com.englishfriendai.app.data.remote.dto.ProgressScoreDto
 import com.englishfriendai.app.domain.model.Conversation
+import com.englishfriendai.app.domain.model.ConversationMode
 import com.englishfriendai.app.domain.model.ConversationScore
 import com.englishfriendai.app.domain.model.Message
+
+// Matches the `mode` enum values in models/Conversation.js.
+fun ConversationMode.toApiValue(): String = when (this) {
+    ConversationMode.ENGLISH -> "english"
+    ConversationMode.TAMIL_ENGLISH -> "tamil-english"
+    ConversationMode.TAMIL -> "tamil"
+}
 
 fun ProgressScoreDto.toDomain(): ConversationScore = ConversationScore(
     grammar = grammar,

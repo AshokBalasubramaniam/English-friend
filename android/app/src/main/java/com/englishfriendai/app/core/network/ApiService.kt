@@ -10,6 +10,8 @@ import com.englishfriendai.app.data.remote.dto.RefreshEnvelope
 import com.englishfriendai.app.data.remote.dto.RefreshTokenRequest
 import com.englishfriendai.app.data.remote.dto.RegisterRequest
 import com.englishfriendai.app.data.remote.dto.SendMessageRequest
+import com.englishfriendai.app.data.remote.dto.StartConversationEnvelope
+import com.englishfriendai.app.data.remote.dto.StartConversationRequest
 import com.englishfriendai.app.data.remote.dto.UploadAudioResponse
 import com.englishfriendai.app.data.remote.dto.VocabularyDto
 import okhttp3.MultipartBody
@@ -44,6 +46,9 @@ interface ApiService {
         @Path("conversationId") conversationId: String,
         @Body request: SendMessageRequest
     ): MessageDto
+
+    @POST("api/v1/conversations")
+    suspend fun startConversation(@Body request: StartConversationRequest): StartConversationEnvelope
 
     @GET("api/v1/conversations")
     suspend fun getConversations(): List<ConversationDto>

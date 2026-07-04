@@ -19,3 +19,23 @@ data class ProgressScoreDto(
     @SerializedName("pronunciation") val pronunciation: Float,
     @SerializedName("overall") val overall: Float
 )
+
+data class StartConversationRequest(
+    @SerializedName("mode") val mode: String
+)
+
+// Backend returns { success, data: { conversation: {...} } } — see conversationController.js.
+// Only the id is modeled here; the fuller ConversationDto above doesn't yet match this
+// endpoint's raw Mongoose document shape (no "title"/"messages" fields exist server-side).
+data class StartConversationEnvelope(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("data") val data: StartConversationData
+)
+
+data class StartConversationData(
+    @SerializedName("conversation") val conversation: ConversationRefDto
+)
+
+data class ConversationRefDto(
+    @SerializedName("_id") val id: String
+)

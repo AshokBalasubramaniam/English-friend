@@ -3,11 +3,14 @@ package com.englishfriendai.app.data.repository
 import com.englishfriendai.app.core.network.ApiService
 import com.englishfriendai.app.core.network.SocketManager
 import com.englishfriendai.app.data.local.db.ConversationDao
+import com.englishfriendai.app.data.local.db.ConversationEntity
 import com.englishfriendai.app.data.local.db.CorrectionDao
 import com.englishfriendai.app.data.local.db.MessageDao
+import com.englishfriendai.app.data.mapper.toApiValue
 import com.englishfriendai.app.data.mapper.toDomain
 import com.englishfriendai.app.data.mapper.toEntity
 import com.englishfriendai.app.data.remote.dto.ConversationDto
+import com.englishfriendai.app.data.remote.dto.StartConversationRequest
 import com.englishfriendai.app.di.IoDispatcher
 import com.englishfriendai.app.domain.model.Conversation
 import com.englishfriendai.app.domain.model.ConversationMode
@@ -66,9 +69,14 @@ class ConversationRepositoryImpl @Inject constructor(
         englishText: String,
         mode: ConversationMode
     ): Flow<Message> = flow {
+        // The backend requires a real, already-created conversation id before it will accept
+        // any message over the socket (see chatSocket.js) — create one now if this is a
+        // brand-new chat, and cache it locally so the FK on messages.conversationId is satisfied.
+        val realConversationId = conversationId ?: startConversationRemoteAndCache(mode)
+
         val userMessage = Message(
             id = UUID.randomUUID().toString(),
-            conversationId = conversationId ?: PENDING_CONVERSATION_ID,
+            conversationId = realConversationId,
             sender = Sender.USER,
             englishText = englishText,
             tamilTranslation = null,
@@ -79,7 +87,7 @@ class ConversationRepositoryImpl @Inject constructor(
         messageDao.upsert(userMessage.toEntity())
 
         socketManager.connect()
-        socketManager.sendMessage(conversationId, englishText, mode.name)
+        socketManager.sendMessage(realConversationId, englishText)
 
         emitAll(
             socketManager.observeMessageEvents().transformWhile { event ->
@@ -88,7 +96,7 @@ class ConversationRepositoryImpl @Inject constructor(
                         emit(
                             Message(
                                 id = STREAMING_MESSAGE_ID,
-                                conversationId = conversationId ?: PENDING_CONVERSATION_ID,
+                                conversationId = realConversationId,
                                 sender = Sender.AI,
                                 englishText = event.partialText,
                                 tamilTranslation = null,
@@ -114,6 +122,21 @@ class ConversationRepositoryImpl @Inject constructor(
             }
         )
     }.flowOn(ioDispatcher)
+
+    private suspend fun startConversationRemoteAndCache(mode: ConversationMode): String {
+        val newId = apiService.startConversation(StartConversationRequest(mode.toApiValue()))
+            .data.conversation.id
+        val now = System.currentTimeMillis()
+        conversationDao.upsert(
+            ConversationEntity(
+                id = newId,
+                title = "New Conversation",
+                createdAt = now,
+                updatedAt = now
+            )
+        )
+        return newId
+    }
 
     override suspend fun deleteConversation(conversationId: String): Result<Unit> = runCatching {
         apiService.deleteConversation(conversationId)
@@ -159,7 +182,6 @@ class ConversationRepositoryImpl @Inject constructor(
     }
 
     companion object {
-        private const val PENDING_CONVERSATION_ID = "pending"
         private const val STREAMING_MESSAGE_ID = "streaming"
     }
 }

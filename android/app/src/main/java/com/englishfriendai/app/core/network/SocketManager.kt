@@ -55,12 +55,15 @@ class SocketManager @Inject constructor(
         socket = null
     }
 
-    /** Sends a chat message over the socket for streaming AI response chunks. */
-    fun sendMessage(conversationId: String?, englishText: String, mode: String) {
+    /**
+     * Sends a chat message over the socket for streaming AI response chunks.
+     * [conversationId] must already exist (see chatSocket.js — it rejects unknown ids)
+     * and mode is set once at conversation creation, not per-message, so it isn't sent here.
+     */
+    fun sendMessage(conversationId: String, englishText: String) {
         val payload = JSONObject().apply {
-            put("conversation_id", conversationId)
-            put("english_text", englishText)
-            put("mode", mode)
+            put("conversationId", conversationId)
+            put("text", englishText)
         }
         socket?.emit(Constants.SOCKET_EVENT_SEND_MESSAGE, payload)
     }
@@ -74,16 +77,24 @@ class SocketManager @Inject constructor(
             trySend(SocketEvent.MessageChunk(text))
         }
         val completeListener = io.socket.emitter.Emitter.Listener { args ->
-            val json = (args.firstOrNull() as? JSONObject)?.toString().orEmpty()
+            // chatSocket.js emits ai_reply_done as { message: {...} } — the message is nested,
+            // not the top-level payload itself.
+            val json = (args.firstOrNull() as? JSONObject)?.optJSONObject("message")?.toString()
+            if (json == null) {
+                Log.e(TAG, "ai_reply_done payload missing 'message' field")
+                return@Listener
+            }
             try {
                 val dto = gson.fromJson(json, MessageDto::class.java)
                 trySend(SocketEvent.MessageComplete(dto))
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse message_complete payload", e)
+                Log.e(TAG, "Failed to parse ai_reply_done payload", e)
             }
         }
         val errorListener = io.socket.emitter.Emitter.Listener { args ->
-            val reason = args.firstOrNull()?.toString() ?: "Unknown socket error"
+            // chatSocket.js emits ai_reply_error as { message: "..." }.
+            val reason = (args.firstOrNull() as? JSONObject)?.optString("message")
+                ?.takeIf { it.isNotBlank() } ?: "Unknown socket error"
             trySend(SocketEvent.ConnectionError(reason))
         }
 
